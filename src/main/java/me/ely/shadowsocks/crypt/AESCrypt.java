@@ -91,7 +91,7 @@ public class AESCrypt {
         encrypt(data.clone(), stream);
     }
 
-    
+
     public void encrypt(byte[] data, ByteArrayOutputStream stream) {
         synchronized (encLock) {
             stream.reset();
@@ -148,6 +148,7 @@ public class AESCrypt {
 
     private void _decrypt(byte[] data, ByteArrayOutputStream stream) {
         byte[] buffer = new byte[data.length];
+
         int processedBytes = decCipher.processBytes(data, 0, data.length, buffer, 0);
         stream.write(buffer, 0, processedBytes);
     }

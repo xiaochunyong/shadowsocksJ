@@ -10,7 +10,7 @@
 -->
 <configuration scan="false" scanPeriod="60 seconds" debug="false">
     <!-- 应用名称 -->
-    <property name="APP_Name" value="LearnJava"/>
+    <property name="APP_Name" value="Shadowsocks"/>
     <!-- 定义日志文件 输入位置 -->
     <property name="LOG_FILE_PATH" value="logs/${APP_Name}"/>
     <!-- 日志最大的历史 30天 -->
@@ -27,7 +27,6 @@
             <pattern>%d{YY-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
         </encoder>
     </appender>
-
 
     <!-- TimeBasedRollingPolicy 日志 -->
     <!-- 滚动记录文件，先将日志记录到指定文件，当符合某个条件时，将日志记录到其他文件 RollingFileAppender-->
@@ -67,11 +66,11 @@
     </appender>
 
     <!-- root级别 DEBUG -->
-    <root level="INFO">
+    <root level="DEBUG">
         <!-- 控制台输出 -->
         <appender-ref ref="STDOUT"/>
         <!-- 每日文件输出(适合日志量较少) -->
-        <!--<appender-ref ref="TimeBasedRollingFILE"/>-->
+        <appender-ref ref="TimeBasedRollingFILE"/>
         <!-- 固定窗口文件输出(适合日志量较多) -->
         <!--<appender-ref ref="FixedWindowRollingFILE"/>-->
     </root>

@@ -1,0 +1,28 @@
+<project name="Shadowsocks">
+
+    <property name="jarbundler.jar" value="/Users/Ely/.m2/repository/com/ultramixer/jarbundler/jarbundler-core/3.3.0/jarbundler-core-3.3.0.jar"/>
+
+    <taskdef
+            name="jarbundler"
+            classpath="${jarbundler.jar}"
+            classname="com.ultramixer.jarbundler.JarBundler"
+            />
+
+    <target name="bundle">
+        <jarbundler dir="release"
+                    name="Shadowsocks"
+                    shortname="Shadowsocks"
+                    signature="Ely"
+                    mainclass="me.ely.shadowsocks.BootGUI"
+                    jar="target/shadowsocks-1.0.jar"
+                    icon="AppIcon.icns"
+                    jvmversion="1.8+"
+                    version="1.0"
+                    build="213"
+                    copyright="Copyright (C) 2016"
+                    bundleid="me.ely.shadowsocks.BootGUI"
+        />
+
+    </target>
+
+</project>

@@ -1,154 +1,117 @@
 package me.ely.shadowsocks.nio;
 
 import me.ely.shadowsocks.crypt.AESCrypt;
-import me.ely.shadowsocks.protocol.Socks5Protocol;
-import me.ely.shadowsocks.utils.Config;
-import me.ely.shadowsocks.utils.Constant;
-import me.ely.shadowsocks.utils.Util;
+import me.ely.shadowsocks.model.Config;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
-import java.util.List;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.LinkedList;
+import java.util.Queue;
 
 /**
- * Created by Ely on 01/12/2016.
+ * Created by Ely on 07/12/2016.
  */
-public class Connector implements Runnable {
+public class Connector {
 
     private static final Logger logger = LoggerFactory.getLogger(Connector.class);
 
-    private SocketHandler localSocketHandler;
-    private SocketHandler remoteSocketHandler;
+    public static int FROM_SRC = 1;
+    public static int FROM_SERVER = 2;
+    public static int TO_SRC = 3;
+    public static int TO_SERVER = 4;
+
+    public static int FROM_LOCAL = 1;
+    public static int FROM_DEST = 2;
+    public static int TO_LOCAL = 3;
+    public static int TO_DEST = 4;
+
+    // client
+    public boolean isHandshaking = true;
+    public boolean isHeader = true;
+
+
+    // server
+    public boolean isHost = true;
+    public String host;
+    public int port;
+
     private SocketChannel localChannel;
+
     private SocketChannel remoteChannel;
 
-    private AESCrypt crypt;
-    private Socks5Protocol protocol;
+    private Queue<byte[]> localQueue;
+    private Queue<byte[]> remoteQueue;
 
-    public String LOG_PREFIX;
+    public AESCrypt crypt;
+    private Config config;
 
-    private ByteArrayOutputStream stream;
-    private BlockingQueue<DataPacket> processQueue;
-    private boolean requestedClose;
 
-    public Connector(LocalSocketHandler localSocketHandler, SocketChannel localChannel, RemoteSocketHandler remoteSocketHandler, SocketChannel remoteChannel, Config config) {
-        this.localSocketHandler = localSocketHandler;
+    public Connector() {
+        localQueue = new LinkedList<>();
+        remoteQueue = new LinkedList<>();
+
+        config = Config.getConfig();
+        crypt = new AESCrypt(config.getMethod(), config.getPassword());
+    }
+
+    public void bind(SocketChannel localChannel, SocketChannel remoteChannel) {
         this.localChannel = localChannel;
-        this.remoteSocketHandler = remoteSocketHandler;
         this.remoteChannel = remoteChannel;
-
-        this.crypt = new AESCrypt(config.getMethod(), config.getPassword());
-        this.protocol = new Socks5Protocol();
-
-        this.LOG_PREFIX = String.format("Local: %s, Remote: %s > ", localChannel, remoteChannel);
-
-        this.stream = new ByteArrayOutputStream(Constant.BUFFER_SIZE);
-
-        this.processQueue = new LinkedBlockingQueue<>();
-        this.requestedClose = false;
     }
 
-    public void close() {
-        requestedClose = true;
-        addDataPacket(null,0,  false);
-    }
-
-    public void forceClose() {
-        logger.trace(LOG_PREFIX + "force close");
-
-        try {
-            if (localChannel.isOpen()) {
-                localChannel.close();
-            }
-            if (remoteChannel.isOpen()) {
-                remoteChannel.close();
-            }
-        } catch (IOException e) {
-            logger.trace(LOG_PREFIX + "force close occurred error", e);
+    public SocketChannel getAnotherChannel(SocketChannel socketChannel) {
+        if (socketChannel != localChannel) {
+            return localChannel;
         }
-
-        close();
+        if (socketChannel != remoteChannel) {
+            return remoteChannel;
+        }
+        throw new RuntimeException("error");
     }
-    
-    public void addDataPacket(byte[] data, int count, boolean isEncrypt) {
-        if (data != null) {
-            byte[] newData = new byte[count];
-            System.arraycopy(data, 0, newData, 0, count);
-            processQueue.add(new DataPacket(newData, isEncrypt));
+
+    public void setLocalChannel(SocketChannel localChannel) {
+        this.localChannel = localChannel;
+    }
+
+    public void setRemoteChannel(SocketChannel remoteChannel) {
+        this.remoteChannel = remoteChannel;
+    }
+
+    public boolean isLocal(SocketChannel socketChannel) {
+        return socketChannel == localChannel;
+    }
+
+    public boolean isRemote(SocketChannel socketChannel) {
+        return socketChannel == remoteChannel;
+    }
+
+
+    public Queue<byte[]> getData(SocketChannel socketChannel) {
+        if (isLocal(socketChannel)) {
+            return remoteQueue;
         } else {
-            processQueue.add(new DataPacket());
+            return localQueue;
         }
     }
 
-    @Override
-    public void run() {
-        DataPacket dataPacket;
-        SocketHandler handler;
-        SocketChannel channel;
-        List<byte[]> sendData = null;
-
-        while (true) {
-            if (processQueue.isEmpty() && requestedClose) {
-                logger.trace(LOG_PREFIX + " Connector has closed");
-
-                if (localChannel.isOpen()) {
-                    localSocketHandler.send(new RequestContext(localChannel, RequestContext.CLOSE_CHANNEL));
-                }
-
-                if (remoteChannel.isOpen()) {
-                    remoteSocketHandler.send(new RequestContext(remoteChannel, RequestContext.CLOSE_CHANNEL));
-                }
-
-                break;
-            }
-
-            try {
-                dataPacket = processQueue.take();
-                if (dataPacket.data == null) {
-                    continue;
-                }
-
-                if (!protocol.isReady()) {
-                    byte[] temp = protocol.getResponse(dataPacket.data);
-                    if (temp != null) {
-                        localSocketHandler.send(new RequestContext(localChannel, RequestContext.CHANGE_SOCKET_OP, SelectionKey.OP_WRITE), temp);
-                    }
-
-                    sendData = protocol.getRemoteResponse(dataPacket.data);
-                    if (sendData == null || sendData.isEmpty()) {
-                        continue;
-                    }
-
-                    logger.info("Connected to :" + Util.getRequestedHostInfo(sendData.get(0)));
-                } else {
-                    sendData.clear();
-                    sendData.add(dataPacket.data);
-                }
-
-                for (byte[] data : sendData) {
-                    stream.reset();
-                    if (dataPacket.isEncrypt) {
-                        crypt.encrypt(data, stream);
-                        channel = remoteChannel;
-                        handler = remoteSocketHandler;
-                    } else {
-                        crypt.decrypt(data, stream);
-                        channel = localChannel;
-                        handler = localSocketHandler;
-                    }
-
-                    handler.send(new RequestContext(channel, RequestContext.CHANGE_SOCKET_OP, SelectionKey.OP_WRITE), stream.toByteArray());
-                }
-            } catch (InterruptedException e) {
-                logger.trace(e.getMessage(), e);
-                break;
-            }
+    public void addData(SocketChannel socketChannel, byte[] data) {
+        if (isLocal(socketChannel)) {
+            localQueue.add(crypt.encrypt(data));
+        } else {
+            remoteQueue.add(crypt.decrypt(data));
         }
+    }
+
+    public void addServerData(SocketChannel socketChannel, byte[] data) {
+        if (isLocal(socketChannel)) {
+            localQueue.add(crypt.decrypt(data));
+        } else {
+            remoteQueue.add(crypt.encrypt(data));
+        }
+    }
+
+    public void addRawData(byte[] data) {
+        remoteQueue.add(data);
     }
 }
