@@ -11,7 +11,9 @@ public class Constant {
 
     public static final String VERSION = "1.0";
 
-    public static final String CONF_FILE = "config.json";
+    public static final String CONF_DIR = String.format("%s/.ShadowsocksJ", System.getProperty("user.home"));
+
+    public static final String CONF_FILE = String.format("%s/%s", CONF_DIR, "config.json");
 
 //    public static final int BUFFER_SIZE = 64;
     public static final int BUFFER_SIZE = 1024 * 16;

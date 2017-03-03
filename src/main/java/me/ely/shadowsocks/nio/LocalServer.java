@@ -39,11 +39,13 @@ public class LocalServer implements Runnable {
 
     public LocalServer(Config config) {
         this.config = config;
-        this.crypt = new AESCrypt(config.getMethod(), config.getPassword());
     }
 
     public void run() {
         try {
+            this.crypt = new AESCrypt(config.getMethod(), config.getPassword());
+
+
             this.running = true;
             this.selector = Selector.open();
 

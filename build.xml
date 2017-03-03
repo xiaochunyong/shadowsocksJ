@@ -1,28 +1,32 @@
-<project name="Shadowsocks">
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- docs see
+              https://java.net/downloads/appbundler/appbundler.html
+              http://docs.oracle.com/javase/7/docs/technotes/guides/jweb/packagingAppsForMac.html
+-->
+<project name="Shadowsocks" default="default" basedir=".">
 
-    <property name="jarbundler.jar" value="/Users/Ely/.m2/repository/com/ultramixer/jarbundler/jarbundler-core/3.3.0/jarbundler-core-3.3.0.jar"/>
+    <!--Import environment variables-->
+    <property environment="env" />
 
-    <taskdef
-            name="jarbundler"
-            classpath="${jarbundler.jar}"
-            classname="com.ultramixer.jarbundler.JarBundler"
-            />
+    <!--Define the appbundler task-->
+    <taskdef name="bundleapp" classname="com.oracle.appbundler.AppBundlerTask" classpath="lib/appbundler-1.0.jar" />
 
-    <target name="bundle">
-        <jarbundler dir="release"
-                    name="Shadowsocks"
-                    shortname="Shadowsocks"
-                    signature="Ely"
-                    mainclass="me.ely.shadowsocks.BootGUI"
-                    jar="target/shadowsocks-1.0.jar"
-                    icon="AppIcon.icns"
-                    jvmversion="1.8+"
-                    version="1.0"
-                    build="213"
-                    copyright="Copyright (C) 2016"
-                    bundleid="me.ely.shadowsocks.BootGUI"
-        />
-
+    <!--Create the app bundle-->
+    <target name="bundle-shadowsocks">
+        <bundleapp outputdirectory="release"
+                   name="Shadowsocks"
+                   displayname="ShadowsocksApp"
+                   identifier="ely.me.shadowsocks"
+                   icon="AppIcon.icns"
+                   shortversion="1.0"
+                   copyright="Copyright (C) 2016"
+                   applicationCategory="public.app-category.developer-tools"
+                   mainclassname="me.ely.shadowsocks.BootGUI">
+            <!-- include JRE -->
+            <!-- <runtime dir="${env.JAVA_HOME}" /> -->
+            <classpath file="target/shadowsocks-1.0-jar-with-dependencies.jar" />
+            <option value="-Dapple.laf.useScreenMenuBar=true"/>
+        </bundleapp>
     </target>
 
 </project>

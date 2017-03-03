@@ -4,10 +4,14 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.annotation.JSONField;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import me.ely.shadowsocks.utils.Constant;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,6 +20,8 @@ import java.util.List;
  * Created by Ely on 29/11/2016.
  */
 public class Config {
+
+    private static final Logger logger = LoggerFactory.getLogger(Config.class);
 
     private String localHost = "127.0.0.1";
 
@@ -101,20 +107,19 @@ public class Config {
 
     public static int i = 0;
     public static Config getConfig() {
-        return new Config("127.0.0.1", 1081, new Server("106.186.20.211", 443, "7YdKNioZcKSPpK73", "aes-256-cfb", "vpn.ely.me"));
-//        return new Config("127.0.0.1", 8388, "7YdKNioZcKSPpK73", "aes-256-cfb", "127.0.0.1", 1081, "vpn.ely.me" + (++i));
+        return new Config("127.0.0.1", 1081, new Server("vpn.ely.me", 8388, "7YdKNioZcKSPpK73", "aes-256-cfb", "vpn.ely.me"));
     }
 
     public static Config loadConfig() {
         try {
             StringBuffer content = new StringBuffer();
-//            Files.readAllLines(Paths.get(Constant.CONF_FILE), StandardCharsets.UTF_8).forEach(line -> content.append(line + "\n"));
-            Files.lines(Paths.get(Constant.CONF_FILE), StandardCharsets.UTF_8).forEach(line -> content.append(line + "\n"));
-            Config config =  JSON.parseObject(content.toString(), Config.class);
-            if (config != null) {
-
+            Path path = Paths.get(Constant.CONF_FILE);
+            if (Files.exists(path)) {
+                Files.lines(path, StandardCharsets.UTF_8).forEach(line -> content.append(line + "\n"));
+                return JSON.parseObject(content.toString(), Config.class);
+            } else {
+                logger.info("config file not exists");
             }
-            return config;
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -123,6 +128,10 @@ public class Config {
 
     public static void saveConfig(Config config) {
         try {
+            File dir = new File(Constant.CONF_DIR);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
             String data = JSON.toJSONString(config, SerializerFeature.PrettyFormat);
             Files.write(Paths.get(Constant.CONF_FILE), data.getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {

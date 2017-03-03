@@ -62,13 +62,14 @@ public class BootGUI extends Application {
         this.config = Config.loadConfig();
         this.localServer = new LocalServer(this.config);
 
-        boolean isMacOS = true;
-        if (isMacOS) {
-            com.apple.eawt.Application application = com.apple.eawt.Application.getApplication();
-            Image image = Toolkit.getDefaultToolkit().getImage(this.getClass().getResource("/images/ssw128.png"));
-            application.setDockIconImage(image);
+//        设置Dock图标
+//        boolean isMacOS = true;
+//        if (isMacOS) {
+//            com.apple.eawt.Application application = com.apple.eawt.Application.getApplication();
+//            Image image = Toolkit.getDefaultToolkit().getImage(this.getClass().getResource("/images/ssw128.png"));
+//            application.setDockIconImage(image);
 //            application.setDockIconBadge("Shadowsocks");
-        }
+//        }
 
 
         initTrayIcon();
